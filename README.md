@@ -6,14 +6,16 @@ This package supports learning decision trees that defer to a more complicated m
 
 ## Installation
 
-```bash
-python -m pip install .
-```
-
-From PyPI:
+We recommend installing from PyPI:
 
 ```bash
 python -m pip install tree-again
+```
+
+You can also install from a local copy of this repository by running the following from its root directory:
+
+```bash
+python -m pip install .
 ```
 
 See [example.ipynb](examples/example.ipynb) for classification and regression examples.
