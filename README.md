@@ -18,12 +18,6 @@ From PyPI:
 python -m pip install tree-again
 ```
 
-With optional TabPFN support:
-
-```bash
-python -m pip install 'tree-again[tabpfn]'
-```
-
 ## Citation
 
 ```bibtex
