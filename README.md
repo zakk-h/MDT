@@ -1,6 +1,6 @@
 # tree-again
 
-Code for **[Multistage Defer Trees for Hybrid Interpretability: If at First You Can't Succeed, Tree Again](https://openreview.net/forum?id=bl5HDT7AO1)** at NeurIPS 2026.
+Code for **[Multistage Defer Trees for Hybrid Interpretability: If at First You Can't Succeed, Tree Again](https://arxiv.org/pdf/2606.30995)** at NeurIPS 2026.
 
 This package supports learning decision trees that defer to a more complicated model and multistage defer trees: a sequence of trees that defer to the next model, optionally with a black box at the end.
 
