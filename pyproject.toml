@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=77", "wheel", "pybind11>=2.13", "numpy>=1.23", "cmeel-eigen>=3.4,<4"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tree-again"
+version = "0.1.0"
+description = "Interpretable decision tree chains with black box deferral"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/*", "src/tree_again/clari_tree/LICENSE"]
+authors = [
+  { name = "Zakk Heile" },
+  { name = "Hayden McTavish" },
+  { name = "Varun Babbar" },
+  { name = "Margo Seltzer" },
+  { name = "Cynthia Rudin" }
+]
+dependencies = [
+  "numpy>=1.23",
+  "matplotlib>=3.6",
+  "scikit-learn>=1.1",
+  "pandas>=1.5",
+  "scipy",
+  "imodels",
+  "interpret",
+  "xgboost",
+  "licketysplit"
+]
+
+[project.optional-dependencies]
+tabpfn = ["tabpfn"]
+
+[project.urls]
+Homepage = "https://github.com/zakk-h/MDT"
+Repository = "https://github.com/zakk-h/MDT"
+Issues = "https://github.com/zakk-h/MDT/issues"
