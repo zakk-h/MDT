@@ -3,3 +3,4 @@ include README.md
 include LICENSE
 include THIRD_PARTY_NOTICES.md
 recursive-include licenses *
+recursive-include examples *.ipynb

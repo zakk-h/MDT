@@ -18,7 +18,7 @@ You can also install from a local copy of this repository by running the followi
 python -m pip install .
 ```
 
-See [example.ipynb](examples/example.ipynb) for classification and regression examples.
+See [example.ipynb](https://github.com/zakk-h/MDT/blob/main/examples/example.ipynb) for classification and regression examples.
 
 ## Citation
 
