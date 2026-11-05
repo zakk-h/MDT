@@ -18,6 +18,8 @@ From PyPI:
 python -m pip install tree-again
 ```
 
+See [example.ipynb](examples/example.ipynb) for classification and regression examples.
+
 ## Citation
 
 ```bibtex

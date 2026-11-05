@@ -808,7 +808,7 @@ class _FixedPredictionBlackBox:
         n = len(X)
         if n != len(self.predictions):
             raise ValueError(
-                "This MDTChain was fit with a fixed prediction vector. "
+                "This MDT was fit with a fixed prediction vector. "
                 "For prediction on data with a different number of rows, pass bb_pred=..."
             )
         return np.asarray(self.predictions).copy()
@@ -5042,7 +5042,7 @@ class _MDTAnalysisMixin:
         y,
         bb_pred: Optional[np.ndarray] = None,
         binarizer: Optional[ThresholdGuessBinarizer] = None,
-    ) -> "MDTChain":
+    ) -> "MDT":
         X_df = _to_dataframe(X)
         y = self._resolve_task_and_y(y, len(X_df))
 
@@ -5653,7 +5653,7 @@ class _MDTAnalysisMixin:
             ),
         }
 
-class MDTChain(_MDTTrainingMixin, _MDTCompressionMixin, _MDTAnalysisMixin):
+class MDT(_MDTTrainingMixin, _MDTCompressionMixin, _MDTAnalysisMixin):
     def __init__(
         self,
         *,
@@ -5843,3 +5843,6 @@ class MDTChain(_MDTTrainingMixin, _MDTCompressionMixin, _MDTAnalysisMixin):
 
         if self.add_history and self.backfit_mode not in {"none"}:
             raise ValueError("add_history=True is not supported with backfitting yet.")
+
+
+MDTChain = MDT
