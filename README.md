@@ -6,8 +6,6 @@ This package supports learning decision trees that defer to a more complicated m
 
 ## Installation
 
-From a source checkout:
-
 ```bash
 python -m pip install .
 ```
