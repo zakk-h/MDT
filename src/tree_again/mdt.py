@@ -4270,6 +4270,14 @@ class _MDTCompressionMixin:
         decoded_paths: List[List[RuleLiteral]] = []
         decoded_actions: List[Any] = []
 
+        linear_leaf_number = 1
+        if self.task_ == "linear_regression":
+            linear_leaf_number += sum(
+                leaf["leaf_type"] == "LINEAR"
+                for previous_stage in self.stages_[:stage_index]
+                for leaf in previous_stage.export_leaf_paths()
+            )
+
         for leaf_idx, (p, a, v) in enumerate(zip(paths, actions, values)):
             new_p: List[RuleLiteral] = []
 
@@ -4320,11 +4328,12 @@ class _MDTCompressionMixin:
                 elif a_int == 1:
                     decoded_actions.append(
                         LinearLeafAction(
-                            label=f"L_{stage_index}_{leaf_idx}",
+                            label=f"L{linear_leaf_number}",
                             stage_index=stage_index,
                             leaf_index=leaf_idx,
                         )
                     )
+                    linear_leaf_number += 1
                 else:
                     decoded_actions.append(f"unknown_{a_int}")
             else:
@@ -4885,6 +4894,7 @@ class _MDTAnalysisMixin:
         ax.set_axis_off()
         internal_r = 0.9
         leaf_r = 1.6
+        numeric_labels = []
 
         def draw(node: RuleTreeNode):
             x, y = pos[id(node)]
@@ -4918,14 +4928,22 @@ class _MDTAnalysisMixin:
                     if isinstance(node.action, LinearLeafAction):
                         label = node.action.label
                     elif isinstance(node.action, float):
-                        label = f"{node.action:.4g}"
+                        label = f"{node.action:.2f}"
                     elif isinstance(node.action, np.floating):
-                        label = f"{float(node.action):.4g}"
+                        label = f"{float(node.action):.2f}"
                     else:
                         label = str(node.action)
                 circ = Circle((x, y), leaf_r, facecolor=face, edgecolor="black", linewidth=1.6, zorder=10)
                 ax.add_patch(circ)
-                ax.text(x, y, label, ha="center", va="center", fontsize=40, fontweight="bold", zorder=10000, clip_on=False)
+                is_numeric = isinstance(node.action, (float, np.floating))
+                text = ax.text(
+                    x, y, label, ha="center", va="center",
+                    fontsize=28 if is_numeric else min(40, 150 / max(3, len(label))),
+                    fontweight="normal" if is_numeric else "bold",
+                    zorder=10000, clip_on=False,
+                )
+                if is_numeric:
+                    numeric_labels.append((text, circ))
             else:
                 face = "#ddeeff"
                 circ = Circle((x, y), internal_r, facecolor=face, edgecolor="black", linewidth=1.6, zorder=10)
@@ -4956,6 +4974,17 @@ class _MDTAnalysisMixin:
         ax.set_aspect("equal", adjustable="box")
         ax.set_axis_off()
         ax.set_title("Rule Tree" if title is None else str(title), fontsize=16, pad=12)
+        if numeric_labels:
+            fig.canvas.draw()
+            renderer = fig.canvas.get_renderer()
+            for text, circle in numeric_labels:
+                text_bounds = text.get_window_extent(renderer)
+                node_bounds = circle.get_window_extent(renderer)
+                relative_size = np.hypot(
+                    text_bounds.width / node_bounds.width,
+                    text_bounds.height / node_bounds.height,
+                )
+                text.set_fontsize(text.get_fontsize() * min(1.0, 0.8 / relative_size))
         if show:
             plt.show()
         return fig, ax
@@ -5260,7 +5289,7 @@ class _MDTAnalysisMixin:
         if dag_representation:
             trees = self.build_dag_stage_trees(compress=compressed, include_pseudo_weightedsep_final_stage=True)
             root = trees[stage_index]
-            ttl = title if title is not None else f"Stage {stage_index + 1} DAG tree"
+            ttl = title if title is not None else f"Stage {stage_index + 1} tree"
         else:
             root = self.get_stage_tree(stage_index)
             ttl = title if title is not None else f"Stage {stage_index + 1} raw tree"
@@ -5286,6 +5315,7 @@ class _MDTAnalysisMixin:
     ) -> int:
         # self._check_is_fit()
         rep = str(representation).lower()
+        rep = "dag" if rep == "sequential" else rep
 
         if rep in {"stage_tree", "raw"}:
             if stage_index is None:
@@ -5296,7 +5326,7 @@ class _MDTAnalysisMixin:
             root = roots[stage_index]
         elif rep == "dag":
             if stage_index is None:
-                raise ValueError("stage_index must be provided for representation='dag'")
+                raise ValueError("stage_index must be provided for representation='dag'/'sequential'")
             dag_roots = self.build_dag_stage_trees(
                 compress=compress,
                 include_pseudo_weightedsep_final_stage=include_pseudo_weightedsep_final_stage,
@@ -5308,7 +5338,7 @@ class _MDTAnalysisMixin:
                 include_pseudo_weightedsep_final_stage=include_pseudo_weightedsep_final_stage,
             )
         else:
-            raise ValueError("representation must be one of {'raw', 'stage_tree', 'dag', 'single_tree'}")
+            raise ValueError("representation must be one of {'raw', 'stage_tree', 'dag', 'sequential', 'single_tree'}")
 
         return _TreeOps.count_leaves_rule_tree(root)
 
@@ -5320,6 +5350,7 @@ class _MDTAnalysisMixin:
         include_pseudo_weightedsep_final_stage: bool = True,
     ) -> List[int]:
         rep = str(representation).lower()
+        rep = "dag" if rep == "sequential" else rep
         if rep == "raw":
             roots = self._get_all_stage_roots(
                 include_pseudo_weightedsep_final_stage=include_pseudo_weightedsep_final_stage
@@ -5330,7 +5361,7 @@ class _MDTAnalysisMixin:
                 include_pseudo_weightedsep_final_stage=include_pseudo_weightedsep_final_stage,
             )
         else:
-            raise ValueError("representation must be one of {'raw', 'dag'}")
+            raise ValueError("representation must be one of {'raw', 'dag', 'sequential'}")
         return [_TreeOps.count_leaves_rule_tree(r) for r in roots]
 
     def total_leaves_across_stages(
@@ -5357,6 +5388,7 @@ class _MDTAnalysisMixin:
         if not self._has_true_black_box(include_pseudo_weightedsep_final_stage=True):
             return 0
         rep = str(representation).lower()
+        rep = "dag" if rep == "sequential" else rep
         if rep == "raw":
             trees = self._get_black_box_ensemble_raw_trees()
             return int(sum(_TreeOps.count_leaves_rule_tree(t) for t in trees))
@@ -5373,7 +5405,7 @@ class _MDTAnalysisMixin:
                 for t in group:
                     total += _TreeOps.count_leaves_rule_tree(t)
             return int(total)
-        raise ValueError("representation must be one of {'raw', 'dag', 'single_tree'}")
+        raise ValueError("representation must be one of {'raw', 'dag', 'sequential', 'single_tree'}")
 
     def black_box_path_lengths(
         self,
@@ -5387,6 +5419,7 @@ class _MDTAnalysisMixin:
         X_df = self._coerce_X_for_predict(X)
         n = len(X_df)
         rep = str(representation).lower()
+        rep = "dag" if rep == "sequential" else rep
 
         if not self._has_true_black_box(include_pseudo_weightedsep_final_stage=True):
             return np.zeros(n, dtype=np.int64)
@@ -5434,7 +5467,7 @@ class _MDTAnalysisMixin:
                 per_sample[i] = cnt
             return per_sample
 
-        raise ValueError("representation must be one of {'raw', 'dag', 'single_tree'}")
+        raise ValueError("representation must be one of {'raw', 'dag', 'sequential', 'single_tree'}")
 
     def path_lengths_chain(
         self,
@@ -5449,6 +5482,7 @@ class _MDTAnalysisMixin:
         # self._check_is_fit()
         X_df = self._coerce_X_for_predict(X)
         rep = str(representation).lower()
+        rep = "dag" if rep == "sequential" else rep
 
         if rep == "single_tree":
             root = self.build_single_tree_representation(
@@ -5477,7 +5511,7 @@ class _MDTAnalysisMixin:
                 include_pseudo_weightedsep_final_stage=include_pseudo_weightedsep_final_stage,
             )
         else:
-            raise ValueError("representation must be one of {'raw', 'dag', 'single_tree'}")
+            raise ValueError("representation must be one of {'raw', 'dag', 'sequential', 'single_tree'}")
 
         n = len(X_df)
         counts = np.zeros(n, dtype=np.int64)
@@ -5626,7 +5660,7 @@ class MDTChain(_MDTTrainingMixin, _MDTCompressionMixin, _MDTAnalysisMixin):
         training_method: str = "top_down",
         lambda_leaf: float = 0.001,
         eta_defer: float = 0.25,
-        defer_lambda_strength: Optional[float] = None,
+        defer_lambda_strength: Optional[float] = 2,
         depth_budget: int = 5,
         max_stages: int = 4,
         lookahead_k: int = 1,
@@ -5635,7 +5669,7 @@ class MDTChain(_MDTTrainingMixin, _MDTCompressionMixin, _MDTAnalysisMixin):
         threshold_guess_params: Optional[Dict[str, Any]] = None,
         same_binarization: bool = True,
         drop_no_signal_columns: bool = False,
-        c: Optional[float] = None,
+        c: Optional[float] = 0.5,
         gamma: float = 0.0,
         gamma_method: str = "normalized",
         projection: bool = False,
